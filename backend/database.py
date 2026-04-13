@@ -81,7 +81,8 @@ class DatabaseManager:
             conn.close()
 
     def create_customer(self, name, email, phone, address, password_hash, role='customer'):
-        customer_id = str(uuid.uuid4())
+        import random
+        customer_id = random.randint(10000000, 99999999)
         created_at = datetime.now().isoformat()
         conn = self.get_connection()
         try:
@@ -109,7 +110,7 @@ class DatabaseManager:
         conn.close()
         return [dict(c) for c in customers]
 
-    def create_account(self, customer_id, account_type, initial_balance=0.0):
+    def create_account(self, customer_id, account_type, balance=0.0):
         account_id = str(uuid.uuid4())
         created_at = datetime.now().isoformat()
         conn = self.get_connection()
@@ -118,7 +119,7 @@ class DatabaseManager:
             cursor.execute("""
                 INSERT INTO accounts (account_id, customer_id, account_type, balance, created_at)
                 VALUES (?, ?, ?, ?, ?)
-            """, (account_id, customer_id, account_type, initial_balance, created_at))
+            """, (account_id, customer_id, account_type, balance, created_at))
             conn.commit()
             return account_id
         finally:
@@ -200,7 +201,8 @@ class DatabaseManager:
         return [dict(t) for t in transactions]
 
     def create_staff(self, email, password_hash, role):
-        staff_id = str(uuid.uuid4())
+        import random
+        staff_id = random.randint(10000000, 99999999)
         created_at = datetime.now().isoformat()
         conn = self.get_connection()
         try:

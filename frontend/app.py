@@ -95,16 +95,15 @@ hr { border-bottom: 1px solid #E5E7EB !important; opacity: 1; margin: 2rem 0 !im
 
 apply_theme()
 
-# Initialize before anything else — prevents KeyError
-if "user_id" not in st.session_state:
-    st.session_state["user_id"] = ""
-if "role" not in st.session_state:
-    st.session_state["role"] = ""
-if "name" not in st.session_state:
-    st.session_state["name"] = ""
-
-# Persist current page in URL so refresh doesn't reset navigation
+# Initialize session state from query parameters if available to persist across refresh
 params = st.query_params
+
+for key in ["user_id", "role", "name"]:
+    if key in params:
+        st.session_state[key] = params[key]
+    elif key not in st.session_state:
+        st.session_state[key] = ""
+
 if "page" in params:
     st.session_state["current_page"] = params["page"]
 elif "current_page" not in st.session_state:
@@ -163,6 +162,11 @@ def show_auth():
                     st.session_state["user_id"] = d["user_id"]
                     st.session_state["role"]    = d["role"]
                     st.session_state["name"]    = d["name"]
+                    
+                    st.query_params["user_id"] = d["user_id"]
+                    st.query_params["role"]    = d["role"]
+                    st.query_params["name"]    = d["name"]
+                    
                     navigate_to("Dashboard")
                     st.rerun()
                 else:
@@ -182,7 +186,7 @@ def show_dashboard():
             pages = ["Dashboard", "My Accounts", "Fund Transfer",
                      "Transaction History", "Service Requests"]
         elif st.session_state["role"] == "admin":
-            pages = ["Manage Customers", "Manage Accounts", "All Transactions"]
+            pages = ["Manage Customers", "Admin Panel", "Manage Accounts", "All Transactions"]
         else:  # support
             pages = ["Service Requests"]
 
@@ -192,11 +196,24 @@ def show_dashboard():
                 navigate_to(p)
                 st.rerun() 
 
-        if st.button("Sign Out"):
-            for k in ["user_id", "role", "name", "current_page"]:
-                st.session_state[k] = ""
-            st.query_params.clear()
-            st.rerun()
+        if st.session_state.get("confirm_signout"):
+            st.warning("Are you sure you want to sign out?")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("Yes"):
+                    for k in ["user_id", "role", "name", "current_page", "confirm_signout"]:
+                        if k in st.session_state:
+                            st.session_state[k] = ""
+                    st.query_params.clear()
+                    st.rerun()
+            with c2:
+                if st.button("No"):
+                    st.session_state["confirm_signout"] = False
+                    st.rerun()
+        else:
+            if st.button("Sign Out"):
+                st.session_state["confirm_signout"] = True
+                st.rerun()
 
     current_page = st.session_state.get("current_page")
     role = st.session_state.get("role")
@@ -302,6 +319,24 @@ def show_dashboard():
                 else:
                     st.error("Failed to load customers")
 
+        elif current_page == "Admin Panel":
+            st.title("Admin Panel")
+            st.subheader("Create Bank Account")
+
+            cust_id = st.number_input("Customer ID", min_value=1, step=1)
+            acc_type = st.selectbox("Account Type", ["savings", "current"], key="admin_panel_acctype")
+            bal = st.number_input("Balance", min_value=0.0, key="admin_panel_balance")
+
+            if st.button("Create API Request"):
+                with st.spinner("Processing..."):
+                    r = requests.post(f"{API}/admin/accounts",
+                        json={"customer_id": int(cust_id), "account_type": acc_type, "balance": bal})
+                    if r.status_code == 200:
+                        d = r.json()
+                        st.success(f"Account successfully created! ID: {d.get('account_id')}")
+                    else:
+                        st.error(r.json().get("detail", "Failed to create account"))
+
         elif current_page == "Manage Accounts":
             # Admin creates bank accounts for customers
             st.title("Manage Accounts")
@@ -313,7 +348,7 @@ def show_dashboard():
                 if st.button("Create"):
                     r = requests.post(f"{API}/admin/accounts",
                         json={"customer_id": cust_id, "account_type": acc_type,
-                              "initial_balance": init_bal})
+                              "balance": init_bal})
                     st.success("Account created") if r.status_code == 200 else st.error("Failed")
 
             with st.spinner("Loading..."):
