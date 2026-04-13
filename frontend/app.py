@@ -96,23 +96,29 @@ hr { border-bottom: 1px solid #E5E7EB !important; opacity: 1; margin: 2rem 0 !im
 apply_theme()
 
 # Initialize before anything else — prevents KeyError
-if "user_id" not in st.session_state:
-    st.session_state["user_id"] = ""
-if "role" not in st.session_state:
-    st.session_state["role"] = ""
-if "name" not in st.session_state:
-    st.session_state["name"] = ""
+for k in ["user_id", "role", "name", "current_page", "confirm_signout"]:
+    if k not in st.session_state:
+        st.session_state[k] = ""
 
 # Persist current page in URL so refresh doesn't reset navigation
 params = st.query_params
 if "page" in params:
     st.session_state["current_page"] = params["page"]
-elif "current_page" not in st.session_state:
+elif not st.session_state["current_page"]:
     st.session_state["current_page"] = "Dashboard"
+
+if "uid" in params:
+    st.session_state["user_id"] = params["uid"]
+    st.session_state["role"] = params.get("role", "customer")
+    st.session_state["name"] = params.get("name", "User")
 
 def navigate_to(page_name):
     st.session_state["current_page"] = page_name
     st.query_params["page"] = page_name
+    if st.session_state["user_id"]:
+        st.query_params["uid"] = st.session_state["user_id"]
+        st.query_params["role"] = st.session_state["role"]
+        st.query_params["name"] = st.session_state["name"]
 
 def show_auth():
     if st.session_state.get("current_page") == "signup":
@@ -163,6 +169,9 @@ def show_auth():
                     st.session_state["user_id"] = d["user_id"]
                     st.session_state["role"]    = d["role"]
                     st.session_state["name"]    = d["name"]
+                    st.query_params["uid"] = d["user_id"]
+                    st.query_params["role"] = d["role"]
+                    st.query_params["name"] = d["name"]
                     navigate_to("Dashboard")
                     st.rerun()
                 else:
@@ -192,11 +201,26 @@ def show_dashboard():
                 navigate_to(p)
                 st.rerun() 
 
+        if "confirm_signout" not in st.session_state:
+            st.session_state["confirm_signout"] = False
+
         if st.button("Sign Out"):
-            for k in ["user_id", "role", "name", "current_page"]:
-                st.session_state[k] = ""
-            st.query_params.clear()
-            st.rerun()
+            st.session_state["confirm_signout"] = True
+
+        if st.session_state.get("confirm_signout"):
+            st.warning("Are you sure you want to sign out?")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("Yes, Sign Out"):
+                    for k in ["user_id", "role", "name", "current_page", "confirm_signout"]:
+                        if k in st.session_state:
+                            st.session_state[k] = ""
+                    st.query_params.clear()
+                    st.rerun()
+            with c2:
+                if st.button("Cancel"):
+                    st.session_state["confirm_signout"] = False
+                    st.rerun()
 
     current_page = st.session_state.get("current_page")
     role = st.session_state.get("role")
@@ -290,10 +314,16 @@ def show_dashboard():
                 phone = st.text_input("Phone"); address = st.text_input("Address")
                 pwd = st.text_input("Password", type="password")
                 if st.button("Add Customer"):
-                    r = requests.post(f"{API}/admin/customers",
-                        json={"name": name, "email": email, "phone": phone,
-                              "address": address, "password": pwd})
-                    st.success("Customer added") if r.status_code == 200 else st.error("Failed")
+                    if not all([name, email, phone, address, pwd]):
+                        st.error("All fields are required.")
+                    else:
+                        r = requests.post(f"{API}/admin/customers",
+                            json={"name": name, "email": email, "phone": phone,
+                                  "address": address, "password": pwd})
+                        if r.status_code == 200:
+                            st.success("Customer added")
+                        else:
+                            st.error("Failed")
 
             with st.spinner("Loading..."):
                 r = requests.get(f"{API}/admin/customers")
@@ -311,10 +341,16 @@ def show_dashboard():
                 acc_type = st.selectbox("Account Type", ["savings", "current"])
                 init_bal = st.number_input("Initial Balance", min_value=0.0)
                 if st.button("Create"):
-                    r = requests.post(f"{API}/admin/accounts",
-                        json={"customer_id": cust_id, "account_type": acc_type,
-                              "initial_balance": init_bal})
-                    st.success("Account created") if r.status_code == 200 else st.error("Failed")
+                    if not cust_id:
+                        st.error("Customer ID is required.")
+                    else:
+                        r = requests.post(f"{API}/admin/accounts",
+                            json={"customer_id": cust_id, "account_type": acc_type,
+                                  "initial_balance": init_bal})
+                        if r.status_code == 200:
+                            st.success("Account created")
+                        else:
+                            st.error("Failed")
 
             with st.spinner("Loading..."):
                 r = requests.get(f"{API}/admin/accounts")
@@ -365,9 +401,15 @@ def show_dashboard():
             req_id    = st.text_input("Request ID to update")
             new_status = st.selectbox("New Status", ["pending", "in-progress", "resolved"])
             if st.button("Update Status"):
-                r = requests.put(f"{API}/support/service-requests/{req_id}",
-                    json={"status": new_status})
-                st.success("Updated") if r.status_code == 200 else st.error("Failed")
+                if not req_id:
+                    st.error("Request ID is required.")
+                else:
+                    r = requests.put(f"{API}/support/service-requests/{req_id}",
+                        json={"status": new_status})
+                    if r.status_code == 200:
+                        st.success("Updated")
+                    else:
+                        st.error("Failed")
 
 # Show auth pages if not logged in
 if not st.session_state["user_id"]:
