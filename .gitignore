@@ -1,0 +1,8 @@
+# SQLite database file
+data/banking.db
+data/*.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
