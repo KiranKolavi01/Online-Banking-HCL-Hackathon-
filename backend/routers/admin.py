@@ -7,6 +7,9 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 @router.post("/customers")
 def admin_create_customer(req: AdminCustomerRequest):
+    if not req.phone.isdigit() or len(req.phone) != 10:
+        raise HTTPException(status_code=400, detail="Phone number must be exactly 10 digits")
+        
     try:
         user_id = db.create_customer(req.name, req.email, req.phone, req.address, hash_password(req.password), "customer")
         return replace_none({"customer_id": user_id, "name": req.name, "email": req.email})

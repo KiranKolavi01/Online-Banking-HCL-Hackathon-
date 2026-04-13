@@ -19,12 +19,18 @@ def auth_signup(req: SignupRequest):
     if len(req.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
     
+    if not req.phone.isdigit() or len(req.phone) != 10:
+        raise HTTPException(status_code=400, detail="Phone number must be exactly 10 digits")
+        
+        
+    if req.role not in ['customer', 'support']:
+        raise HTTPException(status_code=403, detail="Unauthorized role selected for public registration")
+        
     try:
-        if req.role in ['admin', 'support']:
+        if req.role == 'support':
             user_id = db.create_staff(req.email, hash_password(req.password), req.role)
         else:
             user_id = db.create_customer(req.name, req.email, req.phone, req.address, hash_password(req.password), req.role)
-        
         return replace_none({"user_id": user_id, "name": req.name, "role": req.role})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

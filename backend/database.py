@@ -80,13 +80,17 @@ class DatabaseManager:
         finally:
             conn.close()
 
+    def _generate_next_seq_id(self, cursor, table, id_column, start=1):
+        cursor.execute(f"SELECT {id_column} FROM {table}")
+        existing = [int(row[0]) for row in cursor.fetchall() if str(row[0]).isdigit()]
+        return max(existing) + 1 if existing else start
+
     def create_customer(self, name, email, phone, address, password_hash, role='customer'):
-        import random
-        customer_id = random.randint(10000000, 99999999)
         created_at = datetime.now().isoformat()
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
+            customer_id = self._generate_next_seq_id(cursor, 'customers', 'customer_id')
             cursor.execute("""
                 INSERT INTO customers (customer_id, name, email, phone, address, password_hash, role, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -111,11 +115,11 @@ class DatabaseManager:
         return [dict(c) for c in customers]
 
     def create_account(self, customer_id, account_type, balance=0.0):
-        account_id = str(uuid.uuid4())
         created_at = datetime.now().isoformat()
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
+            account_id = self._generate_next_seq_id(cursor, 'accounts', 'account_id', start=1001)
             cursor.execute("""
                 INSERT INTO accounts (account_id, customer_id, account_type, balance, created_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -146,12 +150,12 @@ class DatabaseManager:
     def transfer_funds(self, from_account_id, to_account_id, amount):
         if amount <= 0:
             raise ValueError("amount must be > 0")
-        transaction_id = str(uuid.uuid4())
         date = datetime.now().isoformat()
         conn = self.get_connection()
         try:
             conn.execute("BEGIN")
             cursor = conn.cursor()
+            transaction_id = self._generate_next_seq_id(cursor, 'transactions', 'transaction_id')
             from_account = cursor.execute("SELECT balance, status FROM accounts WHERE account_id = ?", (from_account_id,)).fetchone()
             if not from_account:
                 raise ValueError("Sender account not found")
@@ -201,12 +205,11 @@ class DatabaseManager:
         return [dict(t) for t in transactions]
 
     def create_staff(self, email, password_hash, role):
-        import random
-        staff_id = random.randint(10000000, 99999999)
         created_at = datetime.now().isoformat()
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
+            staff_id = self._generate_next_seq_id(cursor, 'bank_staff', 'staff_id')
             cursor.execute("""
                 INSERT INTO bank_staff (staff_id, email, password_hash, role, created_at)
                 VALUES (?, ?, ?, ?, ?)
@@ -225,11 +228,11 @@ class DatabaseManager:
         return dict(staff) if staff else None
 
     def create_service_request(self, customer_id, req_type, description):
-        request_id = str(uuid.uuid4())
         created_at = datetime.now().isoformat()
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
+            request_id = self._generate_next_seq_id(cursor, 'service_requests', 'request_id')
             cursor.execute("""
                 INSERT INTO service_requests (request_id, customer_id, type, description, status, created_at)
                 VALUES (?, ?, ?, ?, 'pending', ?)
