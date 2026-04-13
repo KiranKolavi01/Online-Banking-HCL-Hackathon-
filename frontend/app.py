@@ -1,3 +1,9 @@
+"""
+Main Frontend Application for the Online Banking System.
+This file contains the entire user interface built using Streamlit.
+It handles routing, session state persistence, and rendering different dashboards
+(Customer, Support, Admin) based on the logged-in user's role.
+"""
 import streamlit as st
 import requests
 import pandas as pd
@@ -181,7 +187,9 @@ def show_auth():
         address  = st.text_input("Address")
         password = st.text_input("Password", type="password")
         confirm  = st.text_input("Confirm Password", type="password")
-        role     = st.selectbox("Role", ["customer", "support"])
+        
+        # Only customers are allowed to register publicly
+        role     = st.selectbox("Role", ["customer"])
 
         if st.button("Sign Up"):
             if not all([name, email, phone, address, password, confirm]):

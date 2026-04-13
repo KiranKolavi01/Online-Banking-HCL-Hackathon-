@@ -1,3 +1,8 @@
+"""
+Admin Routes
+Provides endpoints for creating and managing customers, bank accounts,
+and viewing overall system transactions. This area is intended only for Bank Admins.
+"""
 from fastapi import APIRouter, HTTPException
 from database import db
 from auth import hash_password
@@ -7,6 +12,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 @router.post("/customers")
 def admin_create_customer(req: AdminCustomerRequest):
+    # Endpoint for an admin to manually onboard and create a customer instance
     if not req.phone.isdigit() or len(req.phone) != 10:
         raise HTTPException(status_code=400, detail="Phone number must be exactly 10 digits")
         
@@ -23,6 +29,7 @@ def admin_get_customers():
 
 @router.post("/accounts")
 def admin_create_account(req: AdminAccountRequest):
+    # Endpoint for an admin to issue a bank account (checking/savings) to an existing customer
     try:
         conn = db.get_connection()
         cursor = conn.execute("SELECT customer_id FROM customers WHERE customer_id = ?", (req.customer_id,))
@@ -46,6 +53,7 @@ def admin_create_account(req: AdminAccountRequest):
 
 @router.get("/accounts")
 def admin_get_accounts():
+    # Retrieve all accounts issued in the entire system
     accounts = db.get_all_accounts()
     return replace_none(accounts)
 

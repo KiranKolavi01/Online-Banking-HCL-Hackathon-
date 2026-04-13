@@ -1,3 +1,8 @@
+"""
+FastAPI Main Entry Point
+This file initializes the FastAPI application instance and mounts all the different 
+sub-routers (auth, customer, admin, support) onto the main app to keep the codebase modular.
+"""
 from fastapi import FastAPI
 from routers import customer, admin, support
 import auth

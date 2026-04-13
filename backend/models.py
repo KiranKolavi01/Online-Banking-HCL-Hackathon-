@@ -1,3 +1,8 @@
+"""
+Pydantic Models
+This file defines the data structures and validation rules for all incoming API requests.
+FastAPI uses these models to automatically validate request bodies and return 422 errors for bad data.
+"""
 from pydantic import BaseModel, StrictInt, validator
 from typing import Optional
 
@@ -57,6 +62,7 @@ class SupportUpdateRequest(BaseModel):
     status: str
 
 def replace_none(data):
+    # Recursively replaces None values with empty strings to ensure frontend table compatibility
     if isinstance(data, dict):
         return {k: ("" if v is None else replace_none(v)) for k, v in data.items()}
     elif isinstance(data, list):

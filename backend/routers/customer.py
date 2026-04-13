@@ -1,3 +1,8 @@
+"""
+Customer Routes
+Provides endpoints utilized via the Customer dashboard to fetch accounts,
+make authenticated money transfers, check transactions, and file service requests.
+"""
 from fastapi import APIRouter, HTTPException
 from database import db
 from models import TransferRequest, ServiceRequestInput, replace_none
@@ -6,6 +11,7 @@ router = APIRouter(prefix="/customer", tags=["Customer"])
 
 @router.get("/{customer_id}/accounts")
 def get_customer_accounts(customer_id: int):
+    # Retrieve all accounts (savings, checking) bound to a specific customer
     accounts = db.get_customer_accounts(customer_id)
     return replace_none(accounts)
 
@@ -18,6 +24,7 @@ def get_account_details(customer_id: int, account_id: str):
 
 @router.post("/transfer")
 def customer_transfer(req: TransferRequest):
+    # Executes the process of transferring funds between an owned account and an arbitrary target
     try:
         # Security Gateway: Verify the sender account genuinely belongs to the current logged-in customer
         sender_account = db.get_account_details(req.customer_id, req.from_account)

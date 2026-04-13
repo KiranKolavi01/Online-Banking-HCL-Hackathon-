@@ -1,3 +1,8 @@
+"""
+Database Management Layer
+This file handles all SQLite database operations, connection management,
+and table initializations. It acts as the ORM / Data Layer for the application.
+"""
 import sqlite3
 import uuid
 from datetime import datetime
@@ -148,6 +153,7 @@ class DatabaseManager:
         return [dict(a) for a in accounts]
 
     def transfer_funds(self, from_account_id, to_account_id, amount):
+        # Performs an atomic fund transfer using a SQL transaction
         if amount <= 0:
             raise ValueError("amount must be > 0")
         date = datetime.now().isoformat()
