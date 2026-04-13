@@ -14,6 +14,7 @@ class SigninRequest(BaseModel):
     password: str
 
 class TransferRequest(BaseModel):
+    customer_id: int
     from_account: str
     to_account: str
     amount: float

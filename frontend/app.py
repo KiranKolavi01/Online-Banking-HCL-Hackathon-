@@ -132,6 +132,22 @@ hr { border-bottom: 1px solid rgba(255,255,255,0.1) !important; margin: 2.5rem 0
     border-color: #8b5cf6 !important;
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3) !important;
 }
+
+/* Fix for Selectbox Dropdown Menu Options Visibility */
+[data-baseweb="popover"] > div {
+    background-color: #1e293b !important;
+}
+ul[data-baseweb="menu"] {
+    background-color: #1e293b !important;
+}
+li[data-baseweb="menu"] {
+    background-color: transparent !important;
+    color: #f8fafc !important;
+}
+li[data-baseweb="menu"]:hover {
+    background-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -310,7 +326,7 @@ def show_dashboard():
             if st.button("Transfer"):
                 with st.spinner("Processing..."):
                     r = requests.post(f"{API}/customer/transfer",
-                        json={"from_account": from_acc, "to_account": to_acc, "amount": amount})
+                        json={"customer_id": int(st.session_state['user_id']), "from_account": from_acc, "to_account": to_acc, "amount": amount})
                     if r.status_code == 200:
                         d = r.json()
                         st.success(f"Transfer successful! Transaction ID: {d['transaction_id']}")

@@ -19,6 +19,11 @@ def get_account_details(customer_id: int, account_id: str):
 @router.post("/transfer")
 def customer_transfer(req: TransferRequest):
     try:
+        # Security Gateway: Verify the sender account genuinely belongs to the current logged-in customer
+        sender_account = db.get_account_details(req.customer_id, req.from_account)
+        if not sender_account:
+            raise HTTPException(status_code=403, detail="Unauthorized: You do not own the sender account")
+            
         tx_id = db.transfer_funds(req.from_account, req.to_account, req.amount)
         return replace_none({
             "transaction_id": tx_id, 
